@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      ghcr_image_repository:
+        description: |
+          The image repository on GitHub Container Registry.
+        required: true
+        default: cfcontainerizationbot/kubecf-apps-dns
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Set environment variables
+      run: ./build/ci/set_environment.sh
+    - name: Draft release
+      id: draft_release
+      uses: actions/create-release@v1
+      with:
+        release_name: ${{ env.GIT_TAG }}
+        tag_name: ${{ env.GIT_TAG }}
+        body: |-
+          KubeCF Apps DNS ${{ env.GIT_TAG }}.
+          Image published to `ghcr.io/${{ github.event.inputs.ghcr_image_repository }}``.
+        draft: true
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build and publish image
+      uses: docker/build-push-action@v1
+      with:
+        registry: ghcr.io
+        repository: ${{ github.event.inputs.ghcr_image_repository }}
+        tags: ${{ env.IMAGE_TAG }}
+        labels: >-
+          org.opencontainers.image.version=${{ env.VERSION }},
+          org.opencontainers.image.title=KubeCF Apps DNS,
+          org.opencontainers.image.url=https://github.com/${{ github.repository }},
+          org.opencontainers.image.vendor=SUSE Cloud Application Platform,
+          org.opencontainers.image.description=An image containing the KubeCF Apps DNS CoreDNS plugin
+        add_git_labels: true
+        always_pull: true
+        dockerfile: image/Dockerfile
+        username: ${{ secrets.GHCR_USERNAME }}
+        password: ${{ secrets.GHCR_PASSWORD }}
+    - name: Publish release
+      run: ./build/ci/release.sh
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GIT_REPOSITORY: ${{ github.repository }}
+        RELEASE_ID: ${{ steps.draft_release.outputs.id }}
