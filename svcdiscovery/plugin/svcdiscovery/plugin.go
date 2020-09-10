@@ -104,5 +104,7 @@ func (sd *ServiceDiscovery) respond(rw dns.ResponseWriter, req *dns.Msg, ips []s
 	}
 	res.Answer = answer
 
+	sd.log.Infof("%s: %+v\n", qname, answer)
+
 	return rw.WriteMsg(res)
 }
