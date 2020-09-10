@@ -27,7 +27,7 @@ jobs:
         tag_name: ${{ env.GIT_TAG }}
         body: |-
           KubeCF Apps DNS ${{ env.GIT_TAG }}.
-          Image published to `ghcr.io/${{ github.event.inputs.ghcr_image_repository }}``.
+          Image published to `ghcr.io/${{ github.event.inputs.ghcr_image_repository }}`.
         draft: true
         prerelease: false
       env:
