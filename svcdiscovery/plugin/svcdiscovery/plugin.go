@@ -36,11 +36,12 @@ type ServiceDiscovery struct {
 	ttl       uint32
 }
 
-// Name returns the plugin name.
+// Name satisfies plugin.Handler.Name.
 func (sd *ServiceDiscovery) Name() string { return pluginName }
 
 // ServeDNS handles domain name requests for Cloud Foundry App Service Discovery
-// by resolving internal domain names.
+// by resolving internal domain names. It satisfies satisfies
+// plugin.Handler.ServeDNS.
 func (sd *ServiceDiscovery) ServeDNS(
 	ctx context.Context,
 	res dns.ResponseWriter,
