@@ -13,7 +13,8 @@
 # limitations under the License.
 
 ARG GO_VERSION=1.15
-FROM golang:${GO_VERSION} AS staging
+
+FROM golang:${GO_VERSION} AS staging_coredns
 ARG COREDNS_VERSION=1.7.0
 ENV COREDNS_VERSION=${COREDNS_VERSION}
 WORKDIR /build
@@ -25,12 +26,13 @@ COPY svcdiscovery/plugin/svcdiscovery/ ./plugin/svcdiscovery/
 COPY svcdiscovery/plugin.cfg plugin.cfg
 RUN go generate
 RUN make
-WORKDIR /build
-COPY svcdiscovery/resolvwriter/ ./resolvwriter
+
+FROM golang:${GO_VERSION} AS staging_resolvwriter
+COPY resolvwriter/ /build/resolvwriter
 WORKDIR /build/resolvwriter
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o resolvwriter main.go
 
 FROM scratch
-COPY --from=staging /build/coredns/coredns /coredns
-COPY --from=staging /build/resolvwriter/resolvwriter /resolvwriter
+COPY --from=staging_coredns /build/coredns/coredns /coredns
+COPY --from=staging_resolvwriter /build/resolvwriter/resolvwriter /resolvwriter
 ENTRYPOINT ["/coredns"]
