@@ -51,6 +51,8 @@ func resolve(host string) ([]net.IP, error) {
 		ips, err = net.LookupIP(host)
 		if err != nil {
 			dnsErr, ok := err.(*net.DNSError)
+			// We keep trying to resolve indefinitely because the host is expected to
+			// exist at some point.
 			if ok && (dnsErr.Temporary() || dnsErr.IsNotFound) {
 				time.Sleep(3 * time.Second)
 				continue
