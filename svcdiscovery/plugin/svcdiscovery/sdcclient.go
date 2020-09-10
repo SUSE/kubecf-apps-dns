@@ -34,7 +34,7 @@ type SDCClient struct {
 // and returns the list of IPs from these discovered routes.
 func (sdcc *SDCClient) Discover(ctx context.Context, domainName string) ([]string, error) {
 	url := sdcc.sdcURLBase + domainName
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover service: %w", err)
 	}
