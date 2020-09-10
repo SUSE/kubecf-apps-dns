@@ -50,7 +50,8 @@ func init() {
 		var sdcPort uint16
 		var ttl uint32
 		for c.NextBlock() {
-			switch c.Val() {
+			key := c.Val()
+			switch key {
 			case "tls_ca_path":
 				args := c.RemainingArgs()
 				if len(args) != 1 {
@@ -95,6 +96,8 @@ func init() {
 					return plugin.Error(pluginName, c.Errf("failed to convert TTL: %w", err))
 				}
 				ttl = uint32(u)
+			default:
+				return plugin.Error(pluginName, c.Errf("invalid configuration key: %s", key))
 			}
 		}
 
