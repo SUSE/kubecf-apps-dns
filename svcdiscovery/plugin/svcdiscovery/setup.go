@@ -47,7 +47,7 @@ func init() {
 		var tlsClientCertPath string
 		var tlsClientKeyPath string
 		var sdcHost string
-		var sdcPort string
+		var sdcPort uint16
 		var ttl uint32
 		for c.NextBlock() {
 			switch c.Val() {
@@ -80,7 +80,11 @@ func init() {
 				if len(args) != 1 {
 					return plugin.Error(pluginName, c.ArgErr())
 				}
-				sdcPort = args[0]
+				u, err := strconv.ParseUint(args[0], 10, 16)
+				if err != nil {
+					return plugin.Error(pluginName, c.Errf("failed to convert sdc_port: %w", err))
+				}
+				sdcPort = uint16(u)
 			case "ttl":
 				args := c.RemainingArgs()
 				if len(args) != 1 {
@@ -101,7 +105,7 @@ func init() {
 
 		sdcURLBase := (&url.URL{
 			Scheme: "https",
-			Host:   fmt.Sprintf("%s:%s", sdcHost, sdcPort),
+			Host:   fmt.Sprintf("%s:%d", sdcHost, sdcPort),
 			Path:   sdcEndpointBase,
 		}).String()
 
