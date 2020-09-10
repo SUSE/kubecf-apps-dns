@@ -59,6 +59,7 @@ func (sd *ServiceDiscovery) ServeDNS(
 
 		if len(ips) > 0 {
 			if err := sd.respond(rw, req, ips); err != nil {
+				sd.log.Error(err)
 				return dns.RcodeServerFailure, err
 			}
 			return dns.RcodeSuccess, nil
