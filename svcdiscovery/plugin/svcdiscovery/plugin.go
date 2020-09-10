@@ -51,7 +51,7 @@ func (sd *ServiceDiscovery) ServeDNS(
 	qname := req.Question[0].Name
 
 	if qclass == dns.ClassINET && (qtype == dns.TypeA || qtype == dns.TypeAAAA) {
-		ips, err := sd.sdcClient.Discover(qname)
+		ips, err := sd.sdcClient.Discover(ctx, qname)
 		if err != nil {
 			sd.log.Error(err)
 			return dns.RcodeServerFailure, err

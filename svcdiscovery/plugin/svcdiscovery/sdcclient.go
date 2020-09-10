@@ -17,6 +17,7 @@ limitations under the License.
 package svcdiscovery
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,9 +32,13 @@ type SDCClient struct {
 
 // Discover discovers internal app routes from the Service Discovery Controller
 // and returns the list of IPs from these discovered routes.
-func (sdcc *SDCClient) Discover(domainName string) ([]string, error) {
+func (sdcc *SDCClient) Discover(ctx context.Context, domainName string) ([]string, error) {
 	url := sdcc.sdcURLBase + domainName
-	res, err := sdcc.httpClient.Get(url)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover service: %w", err)
+	}
+	res, err := sdcc.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover service: %w", err)
 	}
