@@ -43,7 +43,7 @@ func main() {
 	}
 }
 
-// resolve resolves the host and returns all IPs.
+// resolve the host and returns all IP addresses associated with it.
 func resolve(host string) ([]net.IP, error) {
 	var ips []net.IP
 	for {
@@ -64,7 +64,7 @@ func resolve(host string) ([]net.IP, error) {
 	return ips, nil
 }
 
-// render renders the output file with the provided nameservers. The output is
+// render the output file with the provided nameservers. The output is
 // in the same format as /etc/resolv.conf but only with nameserver
 // instructions.
 func render(nameservers []net.IP, outPath string) error {

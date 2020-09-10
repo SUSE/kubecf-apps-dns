@@ -40,8 +40,7 @@ type ServiceDiscovery struct {
 func (sd *ServiceDiscovery) Name() string { return pluginName }
 
 // ServeDNS handles domain name requests for Cloud Foundry App Service Discovery
-// by resolving internal domain names. It satisfies satisfies
-// plugin.Handler.ServeDNS.
+// by resolving internal domain names. It satisfies plugin.Handler.ServeDNS.
 func (sd *ServiceDiscovery) ServeDNS(
 	ctx context.Context,
 	rw dns.ResponseWriter,
@@ -78,7 +77,7 @@ func (sd *ServiceDiscovery) respond(rw dns.ResponseWriter, req *dns.Msg, ips []s
 	res.SetReply(req)
 	res.Authoritative = true
 
-	answer := make([]dns.RR, 0)
+	answer := make([]dns.RR, 0, len(ips))
 	for _, ipStr := range ips {
 		ip := net.ParseIP(ipStr)
 		if qtype == dns.TypeA && ip.To4() != nil {

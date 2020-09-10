@@ -10,5 +10,5 @@ binary with only the required plugins for KubeCF and a tool for generating
 a `forward` CoreDNS plugin.
 
 For examples on how to perform container-to-container (c2c) networking and
-service discovering, refer to the following link:
-https://github.com/cloudfoundry-attic/cf-networking-examples/blob/8e3be5faa135746cfd1e05bc618fe18053eab2b5/docs/c2c-with-service-discovery.md
+service discovering, please refer to [the documentation example](
+https://github.com/cloudfoundry-attic/cf-networking-examples/blob/8e3be5faa135746cfd1e05bc618fe18053eab2b5/docs/c2c-with-service-discovery.md).
