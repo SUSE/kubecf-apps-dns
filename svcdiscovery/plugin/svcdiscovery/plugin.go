@@ -44,13 +44,12 @@ func (sd *ServiceDiscovery) Name() string { return pluginName }
 // plugin.Handler.ServeDNS.
 func (sd *ServiceDiscovery) ServeDNS(
 	ctx context.Context,
-	res dns.ResponseWriter,
+	rw dns.ResponseWriter,
 	req *dns.Msg,
 ) (int, error) {
-	state := request.Request{W: res, Req: req}
-	qclass := state.QClass()
-	qtype := state.QType()
-	qname := state.Name()
+	qclass := req.Question[0].Qclass
+	qtype := req.Question[0].Qtype
+	qname := req.Question[0].Name
 
 	if qclass == dns.ClassINET && (qtype == dns.TypeA || qtype == dns.TypeAAAA) {
 		ips, err := sd.sdcClient.Discover(qname)
@@ -60,40 +59,34 @@ func (sd *ServiceDiscovery) ServeDNS(
 		}
 
 		if len(ips) > 0 {
-			res = &ServiceDiscoveryResponseWriter{
-				ResponseWriter: res,
-				ips:            ips,
-				ttl:            sd.ttl,
+			if err := sd.respond(rw, req, ips); err != nil {
+				return dns.RcodeServerFailure, err
 			}
 		}
 	}
 
-	return plugin.NextOrFailure(pluginName, sd.Next, ctx, res, req)
+	return plugin.NextOrFailure(pluginName, sd.Next, ctx, rw, req)
 }
 
-// ServiceDiscoveryResponseWriter wraps a dns.ResponseWriter so it can respond
-// with discovered service addresses.
-type ServiceDiscoveryResponseWriter struct {
-	dns.ResponseWriter
+func (sd *ServiceDiscovery) respond(rw dns.ResponseWriter, req *dns.Msg, ips []string) error {
+	state := request.Request{W: rw, Req: req}
+	qtype := state.QType()
+	qname := state.Name()
 
-	ips []string
-	ttl uint32
-}
+	res := &dns.Msg{}
+	res.SetReply(req)
+	res.Authoritative = true
 
-// WriteMsg writes the response for the discovered service.
-func (sdrw *ServiceDiscoveryResponseWriter) WriteMsg(res *dns.Msg) error {
 	answer := make([]dns.RR, 0)
-	qtype := res.Question[0].Qtype
-	qname := res.Question[0].Name
-	for _, host := range sdrw.ips {
-		ip := net.ParseIP(host)
+	for _, ipStr := range ips {
+		ip := net.ParseIP(ipStr)
 		if qtype == dns.TypeA && ip.To4() != nil {
 			answer = append(answer, &dns.A{
 				Hdr: dns.RR_Header{
 					Name:   qname,
 					Rrtype: dns.TypeA,
 					Class:  dns.ClassINET,
-					Ttl:    sdrw.ttl,
+					Ttl:    sd.ttl,
 				},
 				A: ip,
 			})
@@ -103,15 +96,13 @@ func (sdrw *ServiceDiscoveryResponseWriter) WriteMsg(res *dns.Msg) error {
 					Name:   qname,
 					Rrtype: dns.TypeAAAA,
 					Class:  dns.ClassINET,
-					Ttl:    sdrw.ttl,
+					Ttl:    sd.ttl,
 				},
 				AAAA: ip,
 			})
 		}
 	}
-	res.MsgHdr.Rcode = dns.RcodeSuccess
 	res.Answer = answer
-	res.Ns = make([]dns.RR, 0)
-	res.Extra = make([]dns.RR, 0)
-	return sdrw.ResponseWriter.WriteMsg(res)
+
+	return rw.WriteMsg(res)
 }
