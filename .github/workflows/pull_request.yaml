@@ -1,0 +1,60 @@
+name: Pull request
+
+on: push
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Build Apps DNS image
+      uses: docker/build-push-action@v2
+      with:
+        file: image/Dockerfile
+        tags: kubecf-apps-dns:latest
+        pull: true
+        push: false
+    - uses: azure/setup-kubectl@v1
+    - uses: azure/setup-helm@v1
+    - name: Setup k3s
+      uses: SUSE/k3s-actions/create@master
+    - name: Load Docker image into k3s
+      uses: SUSE/k3s-actions/images-import@master
+      with:
+        image: kubecf-apps-dns:latest
+    - name: Create namespaces
+      uses: SUSE/kubectl-actions/create@master
+      with:
+        filename: tests/acceptance/deploy/k8s/namespaces.yaml
+    - name: Add Quarks Helm repo
+      uses: SUSE/helm-actions/repo-add@master
+      with:
+        name: quarks
+        url: https://cloudfoundry-incubator.github.io/quarks-helm/
+        update: true
+    - name: Install quarks-secret
+      uses: SUSE/helm-actions/install@master
+      with:
+        name: qsecret
+        chart: quarks/quarks-secret
+        flags: >-
+          --wait
+          --namespace qsecret
+          --set "global.monitoredID=qsecret"
+    - name: Create mutual TLS certificates
+      uses: SUSE/kubectl-actions/create@master
+      with:
+        filename: tests/acceptance/deploy/k8s/mtls_certificates.yaml
+    - name: Deploy Apps DNS
+      uses: SUSE/kubectl-actions/create@master
+      with:
+        filename: tests/acceptance/deploy/k8s/apps_dns.yaml
+    - name: Wait for Apps DNS to be ready
+      uses: SUSE/kubectl-actions/wait@master
+      with:
+        resource: pod
+        namespace: tests
+        selector: app=apps-dns

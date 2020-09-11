@@ -1,0 +1,135 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: apps-dns
+  namespace: tests
+  labels:
+    app: apps-dns
+spec:
+  ports:
+  - name: dns
+    protocol: UDP
+    port: 53
+    targetPort: dns
+  selector:
+    app: apps-dns
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apps-dns
+  namespace: tests
+  labels:
+    app: apps-dns
+data:
+  Corefile: |-
+    . {
+      errors
+      health
+
+      svcdiscovery {
+        tls_ca_path /tls/ca.pem
+        tls_client_cert_path /tls/cert.pem
+        tls_client_key_path /tls/key.pem
+        sdc_host service-discovery-controller.tests.svc
+        sdc_port 8054
+        ttl 300
+      }
+
+      forward . /config/forward.conf
+
+      cache 120
+      loop
+      reload
+      loadbalance
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: apps-dns
+  namespace: tests
+  labels:
+    app: apps-dns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: apps-dns
+  template:
+    metadata:
+      labels:
+        app: apps-dns
+    spec:
+      volumes:
+      - name: corefile-config
+        configMap:
+          name: apps-dns
+      - name: forward-config
+        emptyDir: {}
+      - name: client-tls
+        secret:
+          secretName: var-cf-app-sd-client-tls
+          items:
+          - key: ca
+            path: ca.pem
+          - key: certificate
+            path: cert.pem
+          - key: private_key
+            path: key.pem
+      initContainers:
+      - name: resolv-writer
+        image: kubecf-apps-dns:latest
+        imagePullPolicy: Never
+        command: [/resolvwriter]
+        args:
+        - --upstream-dns-host
+        - kube-dns.kube-system.svc
+        - --out
+        - /config/forward.conf
+        volumeMounts:
+        - name: forward-config
+          mountPath: /config
+      containers:
+      - name: apps-dns
+        image: kubecf-apps-dns:latest
+        imagePullPolicy: Never
+        args:
+        - -conf
+        - /config/Corefile
+        ports:
+        - containerPort: 53
+          name: dns
+          protocol: UDP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: corefile-config
+          mountPath: /config/Corefile
+          subPath: Corefile
+          readOnly: true
+        - name: forward-config
+          mountPath: /config/forward.conf
+          subPath: forward.conf
+          readOnly: true
+        - name: client-tls
+          mountPath: /tls
+          readOnly: true

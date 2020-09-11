@@ -1,0 +1,66 @@
+---
+apiVersion: quarks.cloudfoundry.org/v1alpha1
+kind: QuarksSecret
+metadata:
+  name: var-cf-app-sd-ca
+  namespace: tests
+spec:
+  request:
+    certificate:
+      alternativeNames: null
+      commonName: service-discovery-controller.tests.svc
+      isCA: true
+      signerType: local
+      usages:
+      - signing
+      - digital signature
+      - any
+      - cert sign
+      - code signing
+      - digital signature
+  secretName: var-cf-app-sd-ca
+  type: certificate
+---
+apiVersion: quarks.cloudfoundry.org/v1alpha1
+kind: QuarksSecret
+metadata:
+  name: var-cf-app-sd-client-tls
+  namespace: tests
+spec:
+  request:
+    certificate:
+      CAKeyRef:
+        key: private_key
+        name: var-cf-app-sd-ca
+      CARef:
+        key: certificate
+        name: var-cf-app-sd-ca
+      commonName: service-discovery-controller.tests.svc
+      isCA: false
+      signerType: local
+      usages:
+      - client auth
+  secretName: var-cf-app-sd-client-tls
+  type: certificate
+---
+apiVersion: quarks.cloudfoundry.org/v1alpha1
+kind: QuarksSecret
+metadata:
+  name: var-cf-app-sd-server-tls
+  namespace: tests
+spec:
+  request:
+    certificate:
+      CAKeyRef:
+        key: private_key
+        name: var-cf-app-sd-ca
+      CARef:
+        key: certificate
+        name: var-cf-app-sd-ca
+      commonName: service-discovery-controller.tests.svc
+      isCA: false
+      signerType: local
+      usages:
+      - server auth
+  secretName: var-cf-app-sd-server-tls
+  type: certificate

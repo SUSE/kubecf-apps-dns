@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qsecret
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tests
+  labels:
+    quarks.cloudfoundry.org/monitored: qsecret
