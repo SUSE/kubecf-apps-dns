@@ -7,6 +7,7 @@ metadata:
   labels:
     app: apps-dns
 spec:
+  clusterIP: "10.43.100.100"
   ports:
   - name: dns
     protocol: UDP
@@ -39,7 +40,6 @@ data:
 
       forward . /config/forward.conf
 
-      cache 120
       loop
       reload
       loadbalance
