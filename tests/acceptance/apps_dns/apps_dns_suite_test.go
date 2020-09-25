@@ -20,6 +20,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/kubernetes-sigs/minibroker/pkg/kubernetes"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -31,6 +33,7 @@ var (
 	dnsAddr       string
 	serveShutdown chan<- struct{}
 	serveErrCh    <-chan error
+	clusterDomain string
 )
 
 const ttl = 300
@@ -53,6 +56,11 @@ var _ = BeforeSuite(func() {
 	)
 
 	dnsAddr = os.Getenv("DNS_ADDR")
+
+	resolvConf, err := os.Open("/etc/resolv.conf")
+	Expect(err).ToNot(HaveOccurred())
+	clusterDomain, err = kubernetes.ClusterDomain(resolvConf)
+	Expect(err).ToNot(HaveOccurred())
 
 	serveShutdown, serveErrCh = sdc.Serve()
 })

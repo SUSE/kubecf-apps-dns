@@ -68,7 +68,7 @@ var _ = Describe("AppsDns", func() {
 
 	It("should resolve a k8s service domain name", func() {
 		// Prepare
-		domainName := dns.Fqdn("kubernetes.default.svc.cluster.local")
+		domainName := dns.Fqdn(fmt.Sprintf("kubernetes.default.svc.%s", clusterDomain))
 		ips := []net.IP{}
 		sdc.Handle(domainName, fake.Handler(ips))
 
