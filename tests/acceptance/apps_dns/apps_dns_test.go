@@ -211,6 +211,67 @@ var _ = Describe("AppsDns", func() {
 			Expect(res.Answer).To(ConsistOf(expectedAnswer))
 		})
 
+		It("should resolve to multiple mixed IPv4s and IPv6s when the question type is AAAA", func() {
+			// Prepare
+			domainName := dns.Fqdn(fmt.Sprintf("%d.apps.internal", rand.Uint64()))
+			ips := []net.IP{
+				net.ParseIP("10.11.12.13"),
+				net.ParseIP("10.11.12.14"),
+				net.ParseIP("2001:db8::68"),
+				net.ParseIP("2001:db8::69"),
+			}
+			expectedAnswer := []dns.RR{
+				&dns.AAAA{
+					Hdr: dns.RR_Header{
+						Name:     domainName,
+						Rrtype:   dns.TypeAAAA,
+						Class:    dns.ClassINET,
+						Ttl:      ttl,
+						Rdlength: 16,
+					},
+					AAAA: ips[0].To16(),
+				},
+				&dns.AAAA{
+					Hdr: dns.RR_Header{
+						Name:     domainName,
+						Rrtype:   dns.TypeAAAA,
+						Class:    dns.ClassINET,
+						Ttl:      ttl,
+						Rdlength: 16,
+					},
+					AAAA: ips[1].To16(),
+				},
+				&dns.AAAA{
+					Hdr: dns.RR_Header{
+						Name:     domainName,
+						Rrtype:   dns.TypeAAAA,
+						Class:    dns.ClassINET,
+						Ttl:      ttl,
+						Rdlength: 16,
+					},
+					AAAA: ips[2],
+				},
+				&dns.AAAA{
+					Hdr: dns.RR_Header{
+						Name:     domainName,
+						Rrtype:   dns.TypeAAAA,
+						Class:    dns.ClassINET,
+						Ttl:      ttl,
+						Rdlength: 16,
+					},
+					AAAA: ips[3],
+				},
+			}
+			sdc.Handle(domainName, fake.Handler(ips))
+
+			// Assert
+			By("sending a question type AAAA")
+			res, err := dnsQuery(domainName, dns.TypeAAAA)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(res.Rcode).To(Equal(dns.RcodeSuccess))
+			Expect(res.Answer).To(ConsistOf(expectedAnswer))
+		})
+
 		It("should resolve when the request is of type AAAA and the discovered service has an IPv4 address", func() {
 			// Prepare
 			domainName := dns.Fqdn(fmt.Sprintf("%d.apps.internal", rand.Uint64()))
