@@ -21,7 +21,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"sort"
 
 	"github.com/miekg/dns"
 
@@ -170,7 +169,7 @@ var _ = Describe("AppsDns", func() {
 			res, err := dnsQuery(domainName, dns.TypeA)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res.Rcode).To(Equal(dns.RcodeSuccess))
-			Expect(sortedCopy(res.Answer)).To(Equal(sortedCopy(expectedAnswer)))
+			Expect(res.Answer).To(ConsistOf(expectedAnswer))
 		})
 
 		It("should resolve to multiple IPv6s", func() {
@@ -209,7 +208,7 @@ var _ = Describe("AppsDns", func() {
 			res, err := dnsQuery(domainName, dns.TypeAAAA)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(res.Rcode).To(Equal(dns.RcodeSuccess))
-			Expect(sortedCopy(res.Answer)).To(Equal(sortedCopy(expectedAnswer)))
+			Expect(res.Answer).To(ConsistOf(expectedAnswer))
 		})
 
 		It("should resolve when the request is of type AAAA and the discovered service has an IPv4 address", func() {
@@ -288,22 +287,4 @@ func dnsQuery(domainName string, questionType uint16) (*dns.Msg, error) {
 	m.RecursionDesired = true
 	r, _, err := c.Exchange(m, dnsAddr)
 	return r, err
-}
-
-// sortedCopy returns a copy of the original []dns.RR sorted by the address
-// to string. This ensures consistent comparison between DNS answers and
-// expected answers. Since the response ordering can change and it doesn't
-// really matter in terms of service discovery, this function is essential to
-// assert the correctness of the Apps DNS plugin.
-func sortedCopy(original []dns.RR) []dns.RR {
-	cp := make([]dns.RR, len(original))
-	copy(cp, original)
-	sort.Slice(cp, func(i, j int) bool {
-		if cp[i].Header().Rrtype == dns.TypeA {
-			return ((cp[i].(*dns.A)).A.String() < (cp[j].(*dns.A)).A.String())
-		} else {
-			return (cp[i].(*dns.AAAA)).AAAA.String() < (cp[j].(*dns.AAAA)).AAAA.String()
-		}
-	})
-	return cp
 }
