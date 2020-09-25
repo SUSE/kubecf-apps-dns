@@ -241,7 +241,7 @@ var _ = Describe("AppsDns", func() {
 		It("should resolve when the request is of type A and the discovered service has an IPv6 that's a valid IPv4", func() {
 			// Prepare
 			domainName := dns.Fqdn(fmt.Sprintf("%d.apps.internal", rand.Uint64()))
-			ips := []net.IP{net.ParseIP("0:0:0:0:0:ffff:a0b:c0d")}
+			ips := []net.IP{net.ParseIP("::ffff:a0b:c0d")}
 			expectedAnswer := []dns.RR{
 				&dns.A{
 					Hdr: dns.RR_Header{
