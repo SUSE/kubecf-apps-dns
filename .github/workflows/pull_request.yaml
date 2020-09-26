@@ -83,8 +83,14 @@ jobs:
             sleep 1
         done
         kubectl logs --follow --namespace tests --selector app=acceptance-tests --tail -1
-        # Sometimes k8s will exit the logs command but still not update the status.
-        # This hack is to ensure we don't get bit by this race condition.
-        sleep 3
-        kubectl get pods --selector app=acceptance-tests --namespace tests --no-headers \
-          | awk '{ if (tolower($3) == "completed") { exit 0 } else { exit 1 } }'
+        jsonpath='{.items[*].status.containerStatuses[?(@.name == "acceptance-tests")].state.terminated.exitCode}'
+        while true; do
+          exit_code=$(
+            kubectl get pods \
+              --selector app=acceptance-tests \
+              --namespace tests \
+              --output "jsonpath=${jsonpath}"
+          )
+          if [ -n "${exit_code}" ]; then exit "${exit_code}"; fi
+          sleep 1
+        done
