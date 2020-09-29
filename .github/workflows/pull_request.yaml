@@ -29,14 +29,12 @@ jobs:
     - uses: azure/setup-helm@v1
     - name: Setup k3s
       uses: SUSE/k3s-actions/create@v0.1.0
-    - name: Load the Apps DNS image into k3s
-      uses: SUSE/k3s-actions/images-import@v0.1.0
+    - name: Load the images into k3s
+      uses: SUSE/k3s-actions/images-import@v0.2.0
       with:
-        image: kubecf-apps-dns:latest
-    - name: Load the Acceptance Tests image into k3s
-      uses: SUSE/k3s-actions/images-import@v0.1.0
-      with:
-        image: acceptance-tests:latest
+        images:
+          kubecf-apps-dns:latest
+          acceptance-tests:latest
     - name: Create namespaces
       uses: SUSE/kubectl-actions/create@v0.1.0
       with:
@@ -79,7 +77,7 @@ jobs:
         set -o errexit
 
         until kubectl logs --follow --namespace tests --selector app=acceptance-tests --tail -1; do
-            sleep 1
+          sleep 1
         done
         jsonpath='{.items[*].status.containerStatuses[?(@.name == "acceptance-tests")].state.terminated.exitCode}'
         while true; do
