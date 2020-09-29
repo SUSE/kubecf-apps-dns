@@ -32,7 +32,7 @@ var (
 	sdc           *fake.ServiceDiscoveryController
 	dnsAddr       string
 	serveShutdown chan<- struct{}
-	serveErrCh    <-chan error
+	serveErr      <-chan error
 	clusterDomain string
 )
 
@@ -62,11 +62,11 @@ var _ = BeforeSuite(func() {
 	clusterDomain, err = kubernetes.ClusterDomain(resolvConf)
 	Expect(err).ToNot(HaveOccurred())
 
-	serveShutdown, serveErrCh = sdc.Serve()
+	serveShutdown, serveErr = sdc.Serve()
 })
 
 var _ = AfterSuite(func() {
 	serveShutdown <- struct{}{}
-	err := <-serveErrCh
+	err := <-serveErr
 	Expect(err).ToNot(HaveOccurred())
 })
