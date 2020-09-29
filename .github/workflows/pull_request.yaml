@@ -1,0 +1,92 @@
+name: Pull request
+
+on: pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Build Apps DNS image
+      uses: docker/build-push-action@v2
+      with:
+        file: image/Dockerfile
+        tags: kubecf-apps-dns:latest
+        pull: true
+        push: false
+    - name: Build Acceptance tests image
+      uses: docker/build-push-action@v2
+      with:
+        file: tests/acceptance/image/Dockerfile
+        context: tests/acceptance/
+        tags: acceptance-tests:latest
+        pull: true
+        push: false
+    - uses: azure/setup-kubectl@v1
+    - uses: azure/setup-helm@v1
+    - name: Setup k3s
+      uses: SUSE/k3s-actions/create@v0.1.0
+    - name: Load the images into k3s
+      uses: SUSE/k3s-actions/images-import@v0.2.0
+      with:
+        images:
+          kubecf-apps-dns:latest
+          acceptance-tests:latest
+    - name: Create namespaces
+      uses: SUSE/kubectl-actions/create@v0.1.0
+      with:
+        filename: tests/acceptance/deploy/k8s/namespaces.yaml
+    - name: Add Quarks Helm repo
+      uses: SUSE/helm-actions/repo-add@v0.1.0
+      with:
+        name: quarks
+        url: https://cloudfoundry-incubator.github.io/quarks-helm/
+        update: true
+    - name: Install quarks-secret
+      uses: SUSE/helm-actions/install@v0.1.0
+      with:
+        name: qsecret
+        chart: quarks/quarks-secret
+        flags: >-
+          --wait
+          --namespace qsecret
+          --set "global.monitoredID=qsecret"
+    - name: Create mutual TLS certificates
+      uses: SUSE/kubectl-actions/create@v0.1.0
+      with:
+        filename: tests/acceptance/deploy/k8s/mtls_certificates.yaml
+    - name: Deploy the Apps DNS
+      uses: SUSE/kubectl-actions/create@v0.1.0
+      with:
+        filename: tests/acceptance/deploy/k8s/apps_dns.yaml
+    - name: Wait for the Apps DNS to be ready
+      uses: SUSE/kubectl-actions/wait@v0.1.0
+      with:
+        resource: pod
+        namespace: tests
+        selector: app=apps-dns
+    - name: Deploy the Acceptance Tests
+      uses: SUSE/kubectl-actions/create@v0.1.0
+      with:
+        filename: tests/acceptance/deploy/k8s/test.yaml
+    - name: Tail logs
+      run: |-
+        set -o errexit
+
+        until kubectl logs --follow --namespace tests --selector app=acceptance-tests --tail -1; do
+          sleep 1
+        done
+        jsonpath='{.items[*].status.containerStatuses[?(@.name == "acceptance-tests")].state.terminated.exitCode}'
+        while true; do
+          exit_code=$(
+            kubectl get pods \
+              --selector app=acceptance-tests \
+              --namespace tests \
+              --output "jsonpath=${jsonpath}"
+          )
+          if [ -n "${exit_code}" ]; then exit "${exit_code}"; fi
+          sleep 1
+        done

@@ -1,0 +1,67 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-discovery-controller
+  namespace: tests
+  labels:
+    app: service-discovery-controller
+spec:
+  clusterIP: "10.43.100.101"
+  ports:
+  - name: https
+    protocol: TCP
+    port: 8054
+    targetPort: https
+  selector:
+    app: acceptance-tests
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: acceptance-tests
+  namespace: tests
+  labels:
+    app: acceptance-tests
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: acceptance-tests
+    spec:
+      restartPolicy: Never
+      volumes:
+      - name: server-tls
+        secret:
+          secretName: var-cf-app-sd-server-tls
+          items:
+          - key: ca
+            path: ca.pem
+          - key: certificate
+            path: cert.pem
+          - key: private_key
+            path: key.pem
+      containers:
+      - name: acceptance-tests
+        image: acceptance-tests:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8054
+          name: https
+          protocol: TCP
+        volumeMounts:
+        - name: server-tls
+          mountPath: /tls
+          readOnly: true
+        env:
+        - name: TLS_CA_PATH
+          value: /tls/ca.pem
+        - name: TLS_CERT_PATH
+          value: /tls/cert.pem
+        - name: TLS_KEY_PATH
+          value: /tls/key.pem
+        - name: LISTEN_ADDRESS
+          value: ":8054"
+        - name: DNS_ADDR
+          value: "10.43.100.100:53"
