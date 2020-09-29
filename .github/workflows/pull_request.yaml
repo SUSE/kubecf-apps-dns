@@ -78,11 +78,9 @@ jobs:
       run: |-
         set -o errexit
 
-        until kubectl get pods --selector app=acceptance-tests --namespace tests --no-headers \
-          | awk '{ if (tolower($3) ~ /(error|running|completed)/) { exit 0 } else { exit 1 } }'; do
+        until kubectl logs --follow --namespace tests --selector app=acceptance-tests --tail -1; do
             sleep 1
         done
-        kubectl logs --follow --namespace tests --selector app=acceptance-tests --tail -1
         jsonpath='{.items[*].status.containerStatuses[?(@.name == "acceptance-tests")].state.terminated.exitCode}'
         while true; do
           exit_code=$(
