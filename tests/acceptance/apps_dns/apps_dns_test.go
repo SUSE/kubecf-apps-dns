@@ -52,6 +52,16 @@ var _ = Describe("AppsDns", func() {
 		Expect(res.Answer).To(BeEmpty())
 	})
 
+	It("should handle other question types other than A and AAAA", func() {
+		// Assert
+		By("performing a reverse DNS lookup for 1.1.1.1")
+		res, err := dnsQuery("1.1.1.1.in-addr.arpa.", dns.TypePTR)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(res.Rcode).To(Equal(dns.RcodeSuccess))
+		Expect(res.Answer).ToNot(BeEmpty())
+		Expect(res.Answer[0].(*dns.PTR).Ptr).To(Equal("one.one.one.one."))
+	})
+
 	It("should resolve a domain name outside of the Apps DNS authority", func() {
 		// Prepare
 		domainName := dns.Fqdn("github.com")
